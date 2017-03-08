@@ -1,0 +1,252 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int DIM = 4;
+const int GN = 1 << 19;
+const int maxn = 1e5+10;
+
+
+int p2[17];
+int grun[GN];
+
+void GRUNDY(int *num);
+
+int VAL(int mat[][4])
+{
+	int num = 0;
+	for(int i = 0 ; i < 4 ; i ++)
+	{
+		for (int j = 0; j < 4; ++j)
+		{
+			num += mat[i][j]*p2[i*4+j];
+		}
+	}
+	return num;
+}
+
+int VAL(int *A)
+{
+	int num = 0;
+	for( int i = 0 ; i < 16; i++)
+		num += A[i]*p2[i];
+	return num;
+}
+
+
+void MAKE(int i, vector <int * > &nums, int curr[], int K)
+{
+	if(K < 0)
+		return;
+	if(i == 16)
+	{
+		if(K != 0)
+		{}
+		else
+		{
+			GRUNDY(curr);
+			// nums.push_back(curr);
+		}
+		return ;
+	}
+	curr[i] = 1;
+	MAKE(i+1,nums,curr,K-1);
+	curr[i] = 0;
+	MAKE(i+1,nums,curr,K);
+
+}
+
+
+int PHASH[GN];
+
+void GRUNDY(int *num)
+{
+	int mat[4][4];
+	for(int i=0;i<16;i++)
+		mat[i/4][i%4] = num[i];
+	int val_this = VAL(num);
+
+	for(int i=0;i<4;i++)
+	{
+		for(int j=0;j<4;j++)
+		{
+			if(mat[i][j] == 1)
+			{
+				int JL = 4;
+
+				for(int k=i;k<4;k++)
+				{
+					for(int l=j;l<JL;l++)
+					{
+						// cout << i << ' ' << j << "	" << k << ' ' << l << endl;
+						if(mat[k][l] == 0)
+						{
+							JL = l;
+							break;
+						}
+						else
+						{
+							for(int x=i;x<=k;x++)
+							{
+								for(int y=j;y<=l;y++)
+								{
+									mat[x][y] = 0;
+								}
+							}
+							// cout << VAL(mat) << ' ' << grun[VAL(mat)] << endl;
+							PHASH[grun[VAL(mat)]] = val_this;
+							for(int x=i;x<=k;x++)
+							{
+								for(int y=j;y<=l;y++)
+								{
+									mat[x][y] = 1;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// cout << "HERE" << endl;
+
+	for(int i=0;i<GN;i++)
+	{
+		if(PHASH[i] != val_this)
+		{
+	// cout << val_this << endl;
+			grun[val_this] = i;
+			break;
+		}
+	}
+
+}
+
+void PRE()
+{
+
+	for(int i=0;i<17;i++)
+		p2[i] = pow(2,i);
+
+	// cout << "HRE\n";
+	for(int i = 0 ; i <= 16 ; i++)
+	{
+		vector < int * > nums;
+		int curr[16];
+		MAKE(0,nums,curr,i);
+	}
+}
+
+int A[maxn];
+int stree[maxn*4];
+
+
+void segTree(int i, int j, int sidx)
+{
+	if(i == j)
+	{
+		stree[sidx] = A[i];
+		return;
+	}
+	int mid = (i+j)/2;
+	segTree(i,mid,sidx*2+1);
+	segTree(mid+1,j,sidx*2+2);
+	stree[sidx] = stree[sidx*2+1] ^ stree[sidx*2+2];
+}
+
+int query(int i, int j, int sidx, int l, int r)
+{
+	if(i > r or j < l)
+		return 0;
+
+	if(i >= l and j <= r)
+	{
+		return stree[sidx];
+	}
+	int mid = (i+j)/2;
+	return query(i,mid,sidx*2+1,l,r) ^ query(mid+1,j,sidx*2+2,l,r);
+}
+
+
+void update(int i, int j, int sidx, int idx, int val)
+{
+	if(!(idx <= j and idx >= i))
+		return;
+	if(i == j)
+	{
+		stree[sidx] = val;
+		return;
+	}
+	int mid = (i+j)/2;
+	update(i,mid,sidx*2+1,idx,val);
+	update(mid+1,j,sidx*2+2,idx,val);
+	stree[sidx] = stree[sidx*2+1] ^ stree[sidx*2+2];
+}
+
+
+
+
+
+int main()
+{
+	// ios_base::sync_with_stdio(false);
+
+	grun[0] = 0;
+	time_t t1,t2;
+	t1 = clock();
+	PRE();
+	t2 = clock();
+	int T;
+	cin >> T;
+	while ( T-- )
+	{
+		int n,m;
+		cin >> n >> m;
+		for(int i=0;i<n;i++)
+		{
+			int mat[4][4];
+			for(int j=0;j<4;j++)
+			{
+				for(int k=0;k<4;k++)
+				{
+					scanf("%1d",&mat[j][k]);
+				}
+			}
+			A[i] = grun[VAL(mat)];
+		}
+
+		segTree(0,n-1,0);
+
+		for(int i=0;i<m;i++)
+		{
+			int a;
+			scanf("%d",&a);
+			if(a == 1)
+			{
+				int l,r;
+				scanf("%d%d",&l,&r);
+				l--;r--;
+				if(query(0,n-1,0,l,r))
+					cout << "Pishty\n";
+				else
+					cout << "Lotsy\n";
+			}
+			else
+			{
+				int idx;
+				scanf("%d",&idx);
+				idx --;
+				int mat[4][4];
+				for(int j=0;j<4;j++)
+					for(int k=0;k<4;k++)
+						scanf("%1d",&mat[j][k]);
+				int val;
+				val = grun[VAL(mat)];
+				update(0,n-1,0,idx,val);
+			}
+		}
+	}
+
+	return 0;
+
+}
